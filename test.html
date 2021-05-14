@@ -1,0 +1,161 @@
+<script src="./echarts.common.min.js"></script>
+<script src="./data.js"></script>
+
+<div id="timer" style="margin-top:9vh; margin-left:5vw;">运行时间: 第 0 秒</div>
+<div id="main" style="width:90vw; height:90vh; margin-top:1vh; margin-left:5vw;"><div>
+
+<script>
+    var chartDom = document.getElementById('main');
+    var myChart = echarts.init(chartDom);
+    var option;
+
+    var updateFrequency = 10000;
+    var dimension = 0;
+
+    /*
+    data: 从data.js引入
+    [
+        ["Income", "Life Expectancy", "Population", "Country", "Year"], 
+        [815, 34.05, 351014, "Australia", 1800], 
+        ...
+    ]
+    */
+    // 随机确定颜色
+    var countries = new Set();
+    for (let line of data) {
+        countries.add(line[3])
+    }
+    var countryColors = {}
+    for (let country of countries) {
+        countryColors[country] = "#"+
+            getRandomIntInclusive(0,255).toString(16)+
+            getRandomIntInclusive(0,255).toString(16)+ 
+            getRandomIntInclusive(0,255).toString(16);
+    }
+
+    var years = [];
+    for (var i = 0; i < data.length; ++i) {
+        if (years.length === 0 || years[years.length - 1] !== data[i][4]) {
+            years.push(data[i][4]);
+        }
+    }
+
+    var startIndex = 0;
+    var startYear = years[startIndex];
+
+    var option = {
+        grid: {
+            top: 10,
+            bottom: 30,
+            left: 150,
+            right: 80
+        },
+        xAxis: {
+            max: 'dataMax',
+            label: {
+                formatter: function (n) {
+                    return Math.round(n);
+                }
+            }
+        },
+        dataset: {
+            source: data.slice(1).filter(function (d) {
+                return d[4] === startYear;
+            })
+        },
+        yAxis: {
+            type: 'category',
+            inverse: true,
+            max: 20,
+            axisLabel: {
+                show: true,
+                textStyle: {
+                    fontSize: 14
+                },
+                formatter: function (value) {
+                    return value;
+                },
+                rich: {
+                    flag: {
+                        fontSize: 25,
+                        padding: 5
+                    }
+                }
+            },
+            animationDuration: 300,
+            animationDurationUpdate: 300
+        },
+        series: [{
+            realtimeSort: true,
+            seriesLayoutBy: 'column',
+            type: 'bar',
+            itemStyle: {
+                color: function(line) {
+                    return countryColors[line.value[3]];
+                }
+            },
+            encode: {
+                x: dimension,
+                y: 3
+            },
+            label: {
+                show: true,
+                precision: 1,
+                position: 'right',
+                valueAnimation: true,
+                fontFamily: 'monospace'
+            }
+        }],
+        // Disable init animation.
+        animationDuration: 0,
+        animationDurationUpdate: updateFrequency,
+        animationEasing: 'linear',
+        animationEasingUpdate: 'linear',
+        graphic: {
+            elements: [{
+                type: 'text',
+                right: 160,
+                bottom: 60,
+                style: {
+                    text: startYear,
+                    font: 'bolder 80px monospace',
+                    fill: 'rgba(100, 100, 100, 0.25)'
+                },
+                z: 100
+            }]
+        }
+    };
+
+    myChart.setOption(option);
+
+    var cur = 0;
+    setInterval(()=>{
+        cur += 1;
+        document.getElementById('timer').innerHTML = "运行时间: 第 "+cur+" 秒";
+    }, 1000)
+
+    for (var i = startIndex; i < years.length - 1; ++i) {
+        (function (i) {
+            setTimeout(function () {
+                updateYear(years[i + 1]);
+            }, (i - startIndex) * updateFrequency);
+        })(i);
+    }
+
+    function updateYear(year) {
+        var source = data.slice(1).filter(function (d) {
+            return d[4] === year;
+        });
+        option.series[0].data = source;
+        option.graphic.elements[0].style.text = year;
+        myChart.setOption(option);
+    }
+
+    function getRandomIntInclusive(min, max) {
+        min = Math.ceil(min);
+        max = Math.floor(max);
+        return Math.floor(Math.random() * (max - min + 1)) + min; //含最大值，含最小值 
+    }
+
+    option && myChart.setOption(option);
+</script>
